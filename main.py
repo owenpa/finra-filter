@@ -1,7 +1,10 @@
+from urllib.error import HTTPError
 from urllib.request import urlopen, Request
 from bs4 import BeautifulSoup
 import re
 import pandas as pd
+import datetime
+
 pd.options.mode.chained_assignment = None
 
 
@@ -22,7 +25,19 @@ def sortFile(raw):
     return sorted_df
 
 
-if __name__ == '__main__':
+def createFile(url):
+    req = Request(url=url, headers={'User-Agent': 'XYZ/3.0'})
+    page = urlopen(req, timeout=10).read()
+    webpage = BeautifulSoup(page, "html.parser")
+    with open("raw.txt", "w") as file:
+        file.write(str(webpage))
+    df = pd.read_csv("raw.txt", delimiter="|")
+    new_df = sortFile(df)
+    new_df.to_csv("fin.csv", index=None)
+    new_df.to_excel("fin.xlsx", sheet_name="Seet")
+
+
+def exampleOne():
     url = "https://www.finra.org/finra-data/browse-catalog/short-sale-volume-data/daily-short-sale-volume-files"
     htmlpage = urlopen(url)
     htmltext = htmlpage.read().decode("utf-8")
@@ -30,13 +45,43 @@ if __name__ == '__main__':
     for text in soup.findAll('a', attrs={'href': re.compile("^https://")}):
         link = text.get('href')
         if "txt" in link:
-            req = Request(url=link, headers={'User-Agent': 'XYZ/3.0'})
-            page = urlopen(req, timeout=10).read()
-            webpage = BeautifulSoup(page, "html.parser")
-            with open("raw.txt", "w") as file:
-                file.write(str(webpage))
-            df = pd.read_csv("raw.txt", delimiter="|")
-            new_df = sortFile(df)
-            new_df.to_csv("fin.csv", index=None)
-            new_df.to_excel("fin.xlsx", sheet_name="FINRA SHORT DATA")
+            createFile(link)
             break
+
+
+def exampleTwo():
+    # skip all the fancy link scraping and "bruteforce"
+    # if today is saturday, sunday, or monday, and monday's info isn't available, then return friday's information
+    # otherwise return today's information (only available after market close)
+    # otherwise return yesterday's information
+    date = datetime.datetime.now()
+    match date.weekday():
+        case 0:  # Monday
+            try:
+                createFile("https://cdn.finra.org/equity/regsho/daily/CNMSshvol{}.txt"
+                           .format(date.strftime("%Y%m%d")))
+            except HTTPError:
+                new_date = date.replace(day=date.day - 3)
+                print("Could not reach Monday's data.\nFriday's data:\n")
+                createFile("https://cdn.finra.org/equity/regsho/daily/CNMSshvol{}.txt"
+                           .format(new_date.strftime("%Y%m%d")))
+        case 5:  # Saturday
+            new_date = date.replace(day=date.day - 1)
+            createFile("https://cdn.finra.org/equity/regsho/daily/CNMSshvol{}.txt"
+                       .format(new_date.strftime("%Y%m%d")))
+        case 6:  # Sunday
+            new_date = date.replace(day=date.day - 2)
+            createFile("https://cdn.finra.org/equity/regsho/daily/CNMSshvol{}.txt"
+                       .format(new_date.strftime("%Y%m%d")))
+        case default:
+            try:
+                createFile("https://cdn.finra.org/equity/regsho/daily/CNMSshvol{}.txt".format(date.strftime("%Y%m%d")))
+            except HTTPError:
+                new_date = date.replace(day=date.day - 1)
+                print("Could not reach today's data.\nPrevious day's data:\n")
+                createFile("https://cdn.finra.org/equity/regsho/daily/CNMSshvol{}.txt"
+                           .format(new_date.strftime("%Y%m%d")))
+
+
+if __name__ == '__main__':
+    exampleOne()
