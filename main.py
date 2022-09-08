@@ -4,6 +4,7 @@ from bs4 import BeautifulSoup
 import re
 import pandas as pd
 import datetime
+import PySimpleGUI as sg
 
 pd.options.mode.chained_assignment = None
 
@@ -35,6 +36,28 @@ def createFile(url):
     new_df = sortFile(df)
     new_df.to_csv("fin.csv", index=None)
     new_df.to_excel("fin.xlsx", sheet_name="Seet")
+
+
+def createWindow():
+    df = pd.read_csv('fin.csv', delimiter=',')
+    csv = [list(row) for row in df.values]
+    csv.insert(0, df.columns.to_list())
+    layout = [
+        [sg.Table
+         (csv,
+          headings=["Sym", "SVol", "SXVol", "TVol", "Mrkt"],
+          selected_row_colors=("white", "gray"),
+          expand_y=True,
+          enable_events=True,
+          right_click_selects=True)
+         ]
+    ]
+
+    window = sg.Window("CSV Viewer", layout, size=(500, 300))
+    while True:
+        event, values = window.read()
+        if event == sg.WIN_CLOSED:
+            break
 
 
 def exampleOne():
@@ -85,3 +108,4 @@ def exampleTwo():
 
 if __name__ == '__main__':
     exampleOne()
+    createWindow()
