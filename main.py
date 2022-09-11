@@ -74,7 +74,7 @@ def createWindow(date, file):
           key="_table_")
          ],
         [sg.Text(text="Total filtered stocks: " + str(len(df))),
-         sg.Text(text="Previous days filtered stocks: " + str(len(df2)))]  #  TODO
+         sg.Text(text="Previous days filtered stocks: " + str(len(df2)))]  # TODO
     ]
 
     window = sg.Window("CSV Viewer", layout, size=(500, 300), resizable=True, element_justification="center")
@@ -83,7 +83,6 @@ def createWindow(date, file):
 
         if event == "search" and values["_input_"] != "":
             query = values["_input_"].upper()
-            print(len(df))
             if query in df["Sym"].values:
                 window.Element("_output_").update(df.loc[df["Sym"] == query])
         elif event == sg.WIN_CLOSED:
@@ -110,29 +109,30 @@ def exampleTwo():
     match date.weekday():
         case 0:  # Monday
             try:
-                createFile("https://cdn.finra.org/equity/regsho/daily/CNMSshvol{}.txt"
-                           .format(date.strftime("%Y%m%d")))
+                return createFile("https://cdn.finra.org/equity/regsho/daily/CNMSshvol{}.txt"
+                                  .format(date.strftime("%Y%m%d")))
             except HTTPError:
                 new_date = date.replace(day=date.day - 3)
                 print("Could not reach Monday's data.\nFriday's data:\n")
-                createFile("https://cdn.finra.org/equity/regsho/daily/CNMSshvol{}.txt"
-                           .format(new_date.strftime("%Y%m%d")))
+                return createFile("https://cdn.finra.org/equity/regsho/daily/CNMSshvol{}.txt"
+                                  .format(new_date.strftime("%Y%m%d")))
         case 5:  # Saturday
             new_date = date.replace(day=date.day - 1)
-            createFile("https://cdn.finra.org/equity/regsho/daily/CNMSshvol{}.txt"
-                       .format(new_date.strftime("%Y%m%d")))
+            return createFile("https://cdn.finra.org/equity/regsho/daily/CNMSshvol{}.txt"
+                              .format(new_date.strftime("%Y%m%d")))
         case 6:  # Sunday
             new_date = date.replace(day=date.day - 2)
-            createFile("https://cdn.finra.org/equity/regsho/daily/CNMSshvol{}.txt"
-                       .format(new_date.strftime("%Y%m%d")))
+            return createFile("https://cdn.finra.org/equity/regsho/daily/CNMSshvol{}.txt"
+                              .format(new_date.strftime("%Y%m%d")))
         case _:
             try:
-                createFile("https://cdn.finra.org/equity/regsho/daily/CNMSshvol{}.txt".format(date.strftime("%Y%m%d")))
+                return createFile(
+                    "https://cdn.finra.org/equity/regsho/daily/CNMSshvol{}.txt".format(date.strftime("%Y%m%d")))
             except HTTPError:
                 new_date = date.replace(day=date.day - 1)
                 print("Could not reach today's data.\nPrevious day's data:\n")
-                createFile("https://cdn.finra.org/equity/regsho/daily/CNMSshvol{}.txt"
-                           .format(new_date.strftime("%Y%m%d")))
+                return createFile("https://cdn.finra.org/equity/regsho/daily/CNMSshvol{}.txt"
+                                  .format(new_date.strftime("%Y%m%d")))
 
 
 if __name__ == '__main__':
@@ -141,5 +141,5 @@ if __name__ == '__main__':
     except FileExistsError:
         pass
 
-    file_name, files = exampleOne()
+    file_name, files = exampleTwo()
     createWindow(file_name, files)
