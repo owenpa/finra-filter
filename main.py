@@ -47,15 +47,15 @@ def createFile(url):
         except FileNotFoundError:
             pass
     elif len(files) >= 4:
-        text = re.search("\d+", files[:-3].__str__())
-        return date.group(), text.group()
+        text = re.findall("\d+.\csv", files.__str__())
+        return date.group(), text[1]
 
     return date.group()
 
 
-def createWindow(date, file):
+def createWindow(date, yesterday):
     df = pd.read_csv("finra/{}.csv".format(date), delimiter=',')
-    df2 = pd.read_csv("finra/{}.csv".format(file))
+    df2 = pd.read_csv("finra/{}".format(yesterday))
     csv = [list(row) for row in df.values]
     csv.insert(0, df.columns.to_list())
     layout = [
