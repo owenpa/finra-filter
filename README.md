@@ -1,7 +1,6 @@
 # finra-filter
 
 Download finra data and filter through seemingly useless data for personal use.
-The output files comes in both `xlsx` and `csv`.
 
 ## About the project
 
@@ -11,7 +10,7 @@ we're able to reduce it to around 700-900 depending on the day.
 
 ## Experiences this project gave me:
 
-- Dealing with the pandas and BeautifulSoup libraries
+- Dealing with the pandas, BeautifulSoup, and PySimpleGUI libraries
 - Exposure to scraping websites for useful information through html tags and classes
 - CSV files
 
