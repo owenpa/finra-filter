@@ -28,16 +28,17 @@ def sortFile(raw):
     return sorted_df
 
 
-def createFile(url):
-    date = re.search("\d+", url)
-    req = Request(url=url, headers={'User-Agent': 'XYZ/3.0'})
-    page = urlopen(req, timeout=10).read()
-    webpage = BeautifulSoup(page, "html.parser")
-    with open("finra/{}.txt".format(date.group()), "w") as file:
-        file.write(str(webpage))
-    df = pd.read_csv("finra/{}.txt".format(date.group()), delimiter="|")
-    new_df = sortFile(df)
-    new_df.to_csv("finra/{}.csv".format(date.group()), index=None)
+def createFile(urls):
+    for link in urls:
+        date = re.search("\d+", link)
+        req = Request(url=link, headers={'User-Agent': 'XYZ/3.0'})
+        page = urlopen(req, timeout=10).read()
+        webpage = BeautifulSoup(page, "html.parser")
+        with open("finra/{}.txt".format(date.group()), "w") as file:
+            file.write(str(webpage))
+        df = pd.read_csv("finra/{}.txt".format(date.group()), delimiter="|")
+        new_df = sortFile(df)
+        new_df.to_csv("finra/{}.csv".format(date.group()), index=None)
 
     files = sorted(Path("finra/").glob("[0-9]*"))
     if len(files) >= 8:
@@ -46,17 +47,15 @@ def createFile(url):
             os.remove(files[0])
         except FileNotFoundError:
             pass
-    elif len(files) >= 4:
+    if len(files) >= 4:
         text = re.findall("\d+\.csv", files.__str__())
-        return date.group(), text[1]
-
-    return date.group()
+        return text[1], text[0]
 
 
 def createWindow(date, yesterday):
     sg.theme("Dark Grey 14")
 
-    df = pd.read_csv("finra/{}.csv".format(date), delimiter=',')
+    df = pd.read_csv("finra/{}".format(date), delimiter=',')
     df2 = pd.read_csv("finra/{}".format(yesterday))
     csv = [list(row) for row in df.values]
     csv.insert(0, df.columns.to_list())
@@ -98,45 +97,73 @@ def exampleOne():
     htmlpage = urlopen(url)
     htmltext = htmlpage.read().decode("utf-8")
     soup = BeautifulSoup(htmltext, "html.parser")
-    for text in soup.findAll('a', attrs={'href': re.compile("^https://")}):
-        link = text.get('href')
-        if "txt" in link:
-            return createFile(link)
+    returnvalues = []
+    for text in soup.findAll('a', attrs={'href': re.compile("^https:\/.+txt")}):
+        if len(returnvalues) != 2:
+            link = text.get('href')
+            returnvalues.append(link)
+    return createFile(returnvalues)
 
 
 def exampleTwo():
     # skip all the fancy link scraping and "bruteforce"
-    # if today is saturday, sunday, or monday, and monday's info isn't available, then return friday's information
-    # otherwise return today's information (only available after market close)
-    # otherwise return yesterday's information
+    # the problem with using this method is that it requires a LOT more lines of code
+    # and doesn't automatically skip "over stock market holidays"
+    # if today is saturday/sunday or monday, and monday's info isn't available, then return friday's/thursday's info
+    # otherwise return monday's and friday's information
+    # otherwise return today and yesterday's information
     date = datetime.datetime.now()
     match date.weekday():
         case 0:  # Monday
             try:
-                return createFile("https://cdn.finra.org/equity/regsho/daily/CNMSshvol{}.txt"
-                                  .format(date.strftime("%Y%m%d")))
+                yesterday = date.replace(day=date.day - 3)  # Friday
+                returnvalues = ["https://cdn.finra.org/equity/regsho/daily/CNMSshvol{}.txt".format
+                                (date.strftime("%Y%m%d")),
+                                "https://cdn.finra.org/equity/regsho/daily/CNMSshvol{}.txt".format
+                                (yesterday.strftime("%Y%m%d"))
+                                ]
+                return createFile(returnvalues)
             except HTTPError:
-                new_date = date.replace(day=date.day - 3)
-                print("Could not reach Monday's data.\nFriday's data:\n")
-                return createFile("https://cdn.finra.org/equity/regsho/daily/CNMSshvol{}.txt"
-                                  .format(new_date.strftime("%Y%m%d")))
+                friday = date.replace(day=date.day - 3)
+                thursday = date.replace(day=date.day - 4)
+                print("Could not reach Monday's data.\nFriday's and Thursday's data:\n")
+                returnvalues = ["https://cdn.finra.org/equity/regsho/daily/CNMSshvol{}.txt".format
+                                (friday.strftime("%Y%m%d")),
+                                "https://cdn.finra.org/equity/regsho/daily/CNMSshvol{}.txt".format
+                                (thursday.strftime("%Y%m%d"))
+                                ]
+                return createFile(returnvalues)
         case 5:  # Saturday
-            new_date = date.replace(day=date.day - 1)
-            return createFile("https://cdn.finra.org/equity/regsho/daily/CNMSshvol{}.txt"
-                              .format(new_date.strftime("%Y%m%d")))
+            friday = date.replace(day=date.day - 1)
+            thursday = date.replace(day=date.day - 2)
+            print("Friday's and Thursday's data:\n")
+            returnvalues = ["https://cdn.finra.org/equity/regsho/daily/CNMSshvol{}.txt".format
+                            (friday.strftime("%Y%m%d")),
+                            "https://cdn.finra.org/equity/regsho/daily/CNMSshvol{}.txt".format
+                            (thursday.strftime("%Y%m%d"))
+                            ]
+            return createFile(returnvalues)
         case 6:  # Sunday
-            new_date = date.replace(day=date.day - 2)
-            return createFile("https://cdn.finra.org/equity/regsho/daily/CNMSshvol{}.txt"
-                              .format(new_date.strftime("%Y%m%d")))
+            friday = date.replace(day=date.day - 2)
+            thursday = date.replace(day=date.day - 3)
+            print("Friday's and Thursday's data:\n")
+            returnvalues = ["https://cdn.finra.org/equity/regsho/daily/CNMSshvol{}.txt".format
+                            (friday.strftime("%Y%m%d")),
+                            "https://cdn.finra.org/equity/regsho/daily/CNMSshvol{}.txt".format
+                            (thursday.strftime("%Y%m%d"))
+                            ]
+            return createFile(returnvalues)
         case _:
             try:
-                return createFile(
-                    "https://cdn.finra.org/equity/regsho/daily/CNMSshvol{}.txt".format(date.strftime("%Y%m%d")))
+                yesterday = date.replace(day=date.day - 1)
+                returnvalues = ["https://cdn.finra.org/equity/regsho/daily/CNMSshvol{}.txt".format
+                                (date.strftime("%Y%m%d")),
+                                "https://cdn.finra.org/equity/regsho/daily/CNMSshvol{}.txt".format
+                                (yesterday.strftime("%Y%m%d"))
+                                ]
+                return createFile(returnvalues)
             except HTTPError:
-                new_date = date.replace(day=date.day - 1)
-                print("Could not reach today's data.\nPrevious day's data:\n")
-                return createFile("https://cdn.finra.org/equity/regsho/daily/CNMSshvol{}.txt"
-                                  .format(new_date.strftime("%Y%m%d")))
+                print("Could not find either today's or yesterday's information.")
 
 
 if __name__ == '__main__':
@@ -145,5 +172,5 @@ if __name__ == '__main__':
     except FileExistsError:
         pass
 
-    file_name, files = exampleTwo()
-    createWindow(file_name, files)
+    today, yesterday = exampleOne()
+    createWindow(today, yesterday)
