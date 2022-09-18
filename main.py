@@ -47,20 +47,22 @@ def createFile(url):
         except FileNotFoundError:
             pass
     elif len(files) >= 4:
-        text = re.findall("\d+.\csv", files.__str__())
+        text = re.findall("\d+\.csv", files.__str__())
         return date.group(), text[1]
 
     return date.group()
 
 
 def createWindow(date, yesterday):
+    sg.theme("Dark Grey 14")
+
     df = pd.read_csv("finra/{}.csv".format(date), delimiter=',')
     df2 = pd.read_csv("finra/{}".format(yesterday))
     csv = [list(row) for row in df.values]
     csv.insert(0, df.columns.to_list())
     layout = [
         [sg.Input(key="_input_"),
-         sg.Button(button_text="search", enable_events=True)],
+         sg.Button(button_text="search", enable_events=True, size=(5, 1))],
         [sg.Text(text="",
                  enable_events=True,
                  key="_output_")],
@@ -74,9 +76,8 @@ def createWindow(date, yesterday):
           key="_table_")
          ],
         [sg.Text(text="Total filtered stocks: " + str(len(df))),
-         sg.Text(text="Previous days filtered stocks: " + str(len(df2)))]  # TODO
+         sg.Text(text="Previous days filtered stocks: " + str(len(df2)))]
     ]
-
     window = sg.Window("CSV Viewer", layout, size=(500, 300), resizable=True, element_justification="center")
     while True:
         event, values = window.read()
@@ -85,6 +86,9 @@ def createWindow(date, yesterday):
             query = values["_input_"].upper()
             if query in df["Sym"].values:
                 window.Element("_output_").update(df.loc[df["Sym"] == query])
+                window.Element("search").update("search")
+            else:
+                window.Element("search").update("N/A")
         elif event == sg.WIN_CLOSED:
             break
 
